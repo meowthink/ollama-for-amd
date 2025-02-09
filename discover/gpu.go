@@ -4,6 +4,7 @@ package discover
 
 /*
 #cgo linux LDFLAGS: -lrt -lpthread -ldl -lstdc++ -lm
+#cgo windows CFLAGS: -IC:/VulkanSDK/1.4.304.1/Include
 #cgo windows LDFLAGS: -lpthread
 
 #include "gpu_info.h"
@@ -425,7 +426,7 @@ func GetGPUInfo() GpuInfoList {
 				gpuInfo.ID = C.GoString(&memInfo.gpu_id[0])
 				gpuInfo.Compute = fmt.Sprintf("%d.%d", memInfo.major, memInfo.minor)
 				gpuInfo.MinimumMemory = 0
-				gpuInfo.DependencyPath = depPaths
+				// gpuInfo.DependencyPath = depPaths
 				gpuInfo.Name = C.GoString(&memInfo.gpu_name[0])
 				gpuInfo.DriverMajor = int(memInfo.major)
 				gpuInfo.DriverMinor = int(memInfo.minor)
