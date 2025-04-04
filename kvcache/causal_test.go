@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/ollama/ollama/fs"
 	"github.com/ollama/ollama/ml"
 	"github.com/ollama/ollama/model/input"
 )
@@ -300,9 +301,80 @@ func testCache(t *testing.T, backend ml.Backend, cache Cache, tests []testCase) 
 	}
 }
 
+func TestCanResume(t *testing.T) {
+	backend := &testBackend{}
+	windowSize := int32(4)
+	cache := NewSWACache(windowSize, nil)
+	defer cache.Close()
+
+	cache.Init(backend, ml.DTypeF16, 1, 16, 16)
+
+	context := backend.NewContext()
+	defer context.Close()
+
+	err := cache.StartForward(context, input.Batch{
+		Positions: []int32{0, 1, 2, 3},
+		Sequences: []int{0, 0, 0, 0},
+	})
+	if err != nil {
+		t.Fatalf("StartForward failed: %v", err)
+	}
+
+	cache.SetLayer(0)
+	tensor, _ := context.FromFloatSlice([]float32{1, 2, 3, 4}, 1, 1, 4)
+	cache.Put(context, tensor, tensor)
+
+	// with window size 4, nothing has slid out of the window yet
+	if !cache.CanResume(0, 0) {
+		t.Errorf("CanResume(0, 0) = false, want true (within window)")
+	}
+	if !cache.CanResume(0, 1) {
+		t.Errorf("CanResume(0, 1) = false, want true (within window)")
+	}
+	if !cache.CanResume(0, 2) {
+		t.Errorf("CanResume(0, 2) = false, want true (within window)")
+	}
+	if !cache.CanResume(0, 3) {
+		t.Errorf("CanResume(0, 3) = false, want true (latest position)")
+	}
+
+	// shift window by adding position 4
+	err = cache.StartForward(context, input.Batch{
+		Positions: []int32{4, 5},
+		Sequences: []int{0, 0},
+	})
+	if err != nil {
+		t.Fatalf("StartForward failed: %v", err)
+	}
+
+	cache.SetLayer(0)
+	tensor, _ = context.FromFloatSlice([]float32{5, 6}, 1, 1, 2)
+	cache.Put(context, tensor, tensor)
+
+	// only the latest position has overlapping windows
+	if cache.CanResume(0, 0) {
+		t.Errorf("after shift: CanResume(0, 0) = true, want false (outside window)")
+	}
+	if cache.CanResume(0, 1) {
+		t.Errorf("after shift: CanResume(0, 1) = true, want false (outside window)")
+	}
+	if cache.CanResume(0, 2) {
+		t.Errorf("after shift: CanResume(0, 2) = true, want false (outside window)")
+	}
+	if cache.CanResume(0, 3) {
+		t.Errorf("after shift: CanResume(0, 3) = true, want false (outside window)")
+	}
+	if cache.CanResume(0, 4) {
+		t.Errorf("after shift: CanResume(0, 4) = true, want false (outside window)")
+	}
+	if !cache.CanResume(0, 5) {
+		t.Errorf("after shift: CanResume(0, 5) = false, want true (latest position)")
+	}
+}
+
 type testBackend struct{}
 
-func (b *testBackend) Config() ml.Config {
+func (b *testBackend) Config() fs.Config {
 	panic("not implemented")
 }
 
@@ -412,6 +484,14 @@ func (t *testTensor) Floats() []float32 {
 	return out
 }
 
+func (t *testTensor) Neg(ctx ml.Context) ml.Tensor {
+	out := ctx.Empty(t.DType(), t.Shape()...).(*testTensor)
+	for i := range out.data {
+		out.data[i] = -t.data[i]
+	}
+	return out
+}
+
 func (t *testTensor) Add(ctx ml.Context, t2 ml.Tensor) ml.Tensor {
 	out := ctx.Empty(t.DType(), t.Shape()...).(*testTensor)
 
@@ -466,17 +546,15 @@ func (t *testTensor) RoPE(ctx ml.Context, positionIDs, ropeFactors ml.Tensor, di
 	panic("not implemented")
 }
 
-func (t *testTensor) Tanh(ctx ml.Context) ml.Tensor {
+func (t *testTensor) IM2Col(ctx ml.Context, weight ml.Tensor, s0, s1, p0, p1, d0, d1 int) ml.Tensor {
 	panic("not implemented")
 }
 
-func (t *testTensor) GELU(ctx ml.Context) ml.Tensor {
-	panic("not implemented")
-}
-
-func (t *testTensor) SILU(ctx ml.Context) ml.Tensor {
-	panic("not implemented")
-}
+func (t *testTensor) Cos(ctx ml.Context) ml.Tensor  { panic("not implemented") }
+func (t *testTensor) Sin(ctx ml.Context) ml.Tensor  { panic("not implemented") }
+func (t *testTensor) Tanh(ctx ml.Context) ml.Tensor { panic("not implemented") }
+func (t *testTensor) GELU(ctx ml.Context) ml.Tensor { panic("not implemented") }
+func (t *testTensor) SILU(ctx ml.Context) ml.Tensor { panic("not implemented") }
 
 func (t *testTensor) Reshape(ctx ml.Context, shape ...int) ml.Tensor {
 	panic("not implemented")
@@ -528,6 +606,8 @@ func (t *testTensor) Stack(ctx ml.Context, dim int, s ...ml.Tensor) ml.Tensor {
 	panic("not implemented")
 }
 
+func (t *testTensor) Repeat(ctx ml.Context, dim, n int) ml.Tensor { panic("not implemented") }
+
 func (t *testTensor) Concat(ctx ml.Context, t2 ml.Tensor, dim int) ml.Tensor {
 	panic("not implemented")
 }
@@ -540,3 +620,5 @@ func (t *testTensor) Copy(ctx ml.Context, t2 ml.Tensor) ml.Tensor {
 	copy(t2.(*testTensor).data, t.data)
 	return nil
 }
+
+func (t *testTensor) Duplicate(ctx ml.Context) ml.Tensor { panic("not implemented") }
