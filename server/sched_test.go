@@ -126,7 +126,7 @@ func newScenarioRequest(t *testing.T, ctx context.Context, modelName string, est
 		"tokenizer.ggml.tokens":         []string{" "},
 		"tokenizer.ggml.scores":         []float32{0},
 		"tokenizer.ggml.token_type":     []int32{0},
-	}, []ggml.Tensor{
+	}, []*ggml.Tensor{
 		{Name: "blk.0.attn.weight", Kind: uint32(0), Offset: uint64(0), Shape: []uint64{1, 1, 1, 1}, WriterTo: bytes.NewReader(make([]byte, 32))},
 		{Name: "output.weight", Kind: uint32(0), Offset: uint64(0), Shape: []uint64{1, 1, 1, 1}, WriterTo: bytes.NewReader(make([]byte, 32))},
 	}))
@@ -792,3 +792,4 @@ func (s *mockLlm) Close() error {
 func (s *mockLlm) EstimatedVRAM() uint64                  { return s.estimatedVRAM }
 func (s *mockLlm) EstimatedTotal() uint64                 { return s.estimatedTotal }
 func (s *mockLlm) EstimatedVRAMByGPU(gpuid string) uint64 { return s.estimatedVRAMByGPU[gpuid] }
+func (s *mockLlm) Pid() int                               { return -1 }
