@@ -18,19 +18,11 @@
       "inherits": [ "Default" ]
     },
     {
-      "name": "CUDA 11",
-      "inherits": [ "CUDA" ],
-      "cacheVariables": {
-        "CMAKE_CUDA_ARCHITECTURES": "50;52;53;60;61;70;75;80;86",
-        "CMAKE_CUDA_FLAGS": "-Wno-deprecated-gpu-targets"
-      }
-    },
-    {
       "name": "CUDA 12",
       "inherits": [ "CUDA" ],
       "cacheVariables": {
         "CMAKE_CUDA_ARCHITECTURES": "50;60;61;70;75;80;86;87;89;90;90a;120",
-        "CMAKE_CUDA_FLAGS": "-Wno-deprecated-gpu-targets"
+        "CMAKE_CUDA_FLAGS": "-Wno-deprecated-gpu-targets -t 2"
       }
     },
     {
@@ -58,6 +50,7 @@
       "name": "ROCm 6",
       "inherits": [ "ROCm" ],
       "cacheVariables": {
+        "CMAKE_HIP_FLAGS": "-parallel-jobs=4",
         "AMDGPU_TARGETS": "gfx803;gfx902;gfx1030;gfx1031;gfx1032;gfx1034;gfx1035;gfx1036;gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1200;gfx1201;gfx900:xnack-;gfx906:xnack-;gfx90c:xnack-;gfx1010:xnack-;gfx1011:xnack-;gfx1012:xnack-;"
       }
     }
@@ -77,11 +70,6 @@
       "name": "CUDA",
       "configurePreset": "CUDA",
       "targets": [ "ggml-cuda" ]
-    },
-    {
-      "name": "CUDA 11",
-      "inherits": [ "CUDA" ],
-      "configurePreset": "CUDA 11"
     },
     {
       "name": "CUDA 12",
