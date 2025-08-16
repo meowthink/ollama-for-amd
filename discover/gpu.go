@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -431,6 +432,10 @@ func GetGPUInfo() GpuInfoList {
 				gpuInfo.DriverMajor = int(memInfo.major)
 				gpuInfo.DriverMinor = int(memInfo.minor)
 
+				visibleDevs := os.Getenv("GGML_VK_VISIBLE_DEVICES")
+				if visibleDevs != "" && !slices.Contains(strings.Split(visibleDevs, ","), gpuInfo.ID) {
+					continue
+				}
 				// TODO potentially sort on our own algorithm instead of what the underlying GPU library does...
 				vulkanGPUs = append(vulkanGPUs, gpuInfo)
 			}
