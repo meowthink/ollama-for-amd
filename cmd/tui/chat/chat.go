@@ -55,6 +55,8 @@ type Options struct {
 	Client                      coreagent.ChatClient
 	Tools                       *coreagent.Registry
 	Skills                      *coreagent.SkillCatalog
+	ImportSkills                func(string) (coreagent.SkillImportResult, error)
+	ReloadSkills                func() (*coreagent.SkillCatalog, error)
 	ToolRegistryForModel        func(context.Context, string) *coreagent.Registry
 	ToolsDisabled               bool
 	MultiModalForModel          func(context.Context, string) bool
@@ -138,6 +140,8 @@ type chatModel struct {
 	defaultAllowAll    bool
 	permissionNotice   string
 	selection          chatSelection
+
+	systemPromptDisabled bool
 
 	width              int
 	height             int
@@ -593,6 +597,9 @@ func (m chatModel) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.applySlashCompletion() {
+			return m, nil
+		}
+		if m.applyMentionCompletion() {
 			return m, nil
 		}
 		return m.handleSubmit()
